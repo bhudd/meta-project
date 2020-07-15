@@ -5,7 +5,7 @@ const tildify = require('tildify');
 const gitClone = require('../lib/gitClone');
 
 const usage = () => {
-  console.log(`Usage: meta-project-import <destFolder> <childRepoUrl>
+  console.log(`Usage: meta-project-import <destFolder> <childRepoUrl> [childRepoBranch]
   
 Configures .meta file and imports a project from provided 'childRepoUrl' using git clone into 'destFolder'.`);
   process.exit(1);
@@ -19,6 +19,8 @@ const run = ({
   
   const destArg = argv[2] === 'blank' ? argv[3] : argv[2];
   const repoUrl = argv[3] === 'blank' ? argv[4] : argv[3];
+  const repoBranch = argv[4] === 'blank' ? (argv[5] === 'blank' ? 'master' : argv[5]) : argv[4];
+
   (destArg && repoUrl) || usage();
   
   const path = require('path');
@@ -43,8 +45,8 @@ const run = ({
   }
   
   const gitExists = destExists && fs.existsSync(path.join(dest, '.git'));
-  if (meta.projects[dest] === repoUrl && gitExists) {
-    console.log(`${green('✓')} A git repository already exists at this location. No changes required.`);
+  if (meta.projects[dest] === repoUrl && meta.branches[dest] === repoBranch && gitExists) {
+    console.log(`${green('✓')} A git repository already exists at this location on the proper branch. No changes required.`);
     process.exit(0);
   }
 
@@ -59,16 +61,19 @@ const run = ({
   
     console.log(`Updating "projects" in ${cyan(tildify(metaPath))}`); // prettier-ignore
     if (!meta.projects) meta.projects = {};
+    if (!meta.branches) meta.branches = {};
     meta.projects[dest] = repoUrl;
+    meta.branches[dest] = repoBranch;
     getMetaFile.save(meta);
-  
+
     console.log(`\n${green('✓')} Project ${destExists ? 'already exists. No changes required.' : 'imported'}: ${green(dest)}`); // prettier-ignore
   }
   
   gitClone({
     cb,
-    repoUrl,
     dest,
+    repoUrl,
+    repoBranch,
     gitExists
   });
 }
